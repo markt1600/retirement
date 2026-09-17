@@ -1,11 +1,13 @@
-# Retirement planning & the Trinity study on longer horizons
+# Safe withdrawal rates on long histories (Trinity methodology)
 
 Two static pages, no build step. Open them from disk or via GitHub Pages.
 
 | Page | What it does |
 |---|---|
-| [`index.html`](index.html) | **VWRA savings, SGD spending.** Historical-cycles simulator for a USD portfolio (MSCI World / PIMCO Income / Treasuries / T-bills) funding SGD spending, with mortality, spending flexibility, a US worst-window stress test (1928→) and Japan / UK / Germany worst-window stress tests (1970→). |
-| [`trinity.html`](trinity.html) | **Trinity study, longer horizons.** Re-runs the 1998 Trinity success-rate tables on 150+ years of data, extends payout periods to 35–60 years, and repeats the exercise for Japan, the UK, Germany and a global-equity proxy. Everything is computed in the browser from `data/markets.js`. |
+| [`index.html`](index.html) | **Safe withdrawal rate.** Choose a time horizon and the markets to test (US, world proxy, UK, Germany, Japan). For each market the page replays every overlapping historical window of that length with the Trinity study's rules and reports the highest first-year withdrawal rate that survived the required share of windows, plus the 4%-rule success rate and a success-vs-rate chart. Optional portfolio value turns the rate into a first-year amount. |
+| [`trinity.html`](trinity.html) | **Full Trinity grids.** The classic period × withdrawal-rate success tables for every stock/bond mix, one market at a time, with presets for the original 1926–1995 sample. |
+
+Both pages compute everything in the browser from `data/markets.js`.
 
 ## Trinity re-run: what was done
 
@@ -71,8 +73,8 @@ countries have no gaps.
 |---|---|---|
 | `data/shiller_monthly.csv` | monthly CPI, nominal stock and 10-yr bond total-return indices, 1871→ | Shiller, `ie_data.xls` |
 | `data/shiller_annual.csv` | US annual % returns, Jan→Jan | derived |
-| `data/intl_extension.csv` | Japan / UK / Germany 2021–2025 equity, bond, CPI | MSCI / local index data carried over from `index.html` |
-| `data/msci_world_usd.csv` | MSCI World USD total return 1970–2025 | carried over from `index.html` |
+| `data/intl_extension.csv` | Japan / UK / Germany 2021–2025 equity, bond, CPI | MSCI / local index data (from the earlier SGD planner in this repo's history) |
+| `data/msci_world_usd.csv` | MSCI World USD total return 1970–2025 | same |
 | `data/markets.csv`, `data/markets.js` | unified annual series for `us`, `japan`, `uk`, `germany`, `world` | built from the above plus JST R6 |
 
 Rebuild (needs `pandas`, `xlrd`, `openpyxl`):

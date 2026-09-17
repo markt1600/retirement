@@ -134,8 +134,8 @@
         </select>
       </div>
       <div class="row">
-        <label>Fees <span class="hint">% per yr</span></label>
-        <input type="number" id="fees" value="0" step="0.05" min="0">
+        <label>Fees <span class="hint">% per yr, on the whole portfolio</span></label>
+        <input type="number" id="fees" value="0.8" step="0.05" min="0">
       </div>
       <div class="row">
         <label>Earliest start year <span class="hint">blank = all</span></label>
@@ -226,7 +226,8 @@
       stock/bond mix's actual return for that calendar year and is rebalanced.  A window succeeds
       if the balance is still positive after the last year.  Do this for every start year the data
       allows, and the success rate is the share of windows that survived.  The safe rate is the
-      highest rate, on a 0.05% grid, whose success rate meets your requirement.
+      highest rate, on a 0.05% grid, whose success rate meets your requirement.  Fees are deducted
+      from the whole portfolio every year (default 0.8%; the original study had none).
       <p>
         <strong>Spending flexibility (optional).</strong> With the cut enabled, any year in which the
         portfolio stands below the chosen share of its starting value, measured in real terms under

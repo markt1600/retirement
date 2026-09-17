@@ -29,8 +29,9 @@ This repo repeats that, with three changes:
    That is the closest free long-history stand-in for a VWRA-style global fund.
 
 Mechanics: annual steps, rebalanced yearly, withdrawal at the start of each year (switchable),
-withdrawals either fixed in nominal terms or growing with CPI, no fees (a fee input exists on the
-page), success = positive balance at the end. Bonds are 10-year Treasuries / long government
+withdrawals either fixed in nominal terms or growing with CPI, a 0.8%/yr fee deducted from the
+whole portfolio (editable on the page and via `--fees`; the original study and the replication
+below use none), success = positive balance at the end. Bonds are 10-year Treasuries / long government
 bonds, not the long-term corporates Trinity used, which makes bond-heavy rows slightly worse.
 
 **Optional spending flexibility** (both pages and the CLI; off by default, not part of the original
@@ -43,36 +44,37 @@ study). Two rules, each with its own switch:
   apply only during the first N years.
 
 When both trigger in the same year the larger cut is used, not both. The safe rate reported is the
-full, uncut starting rate. For the US with a 75/25 mix, a 20% cut below 80% lifts the 4% rule from
-93% to 100% of 40-year windows and from 88% to 99% of 60-year windows
+full, uncut starting rate. For the US with a 75/25 mix and 0.8% fees, a 20% cut below 80% lifts the
+4% rule from 80% to 98% of 40-year windows and from 73% to 93% of 60-year windows
 ([`results/trinity_us_1871-2025_cut20below80.md`](results/trinity_us_1871-2025_cut20below80.md));
 adding a 10% cut below 90% in the first 10 years changes little on top of that
 ([`results/trinity_us_1871-2025_cut20below80_early10below90for10.md`](results/trinity_us_1871-2025_cut20below80_early10below90for10.md)).
 CLI: `--cut-pct 20 --cut-below 80 --early-cut-pct 10 --early-cut-below 90 --early-years 10`.
 
-### Headline results (inflation-adjusted withdrawals, full history of each market)
+### Headline results (inflation-adjusted withdrawals, 0.8% fees, full history of each market)
 
 Success rate at a 4% initial withdrawal, 75% stocks / 25% bonds. Window counts in brackets.
 
 | Payout period | United States | World proxy (USD) | United Kingdom | Germany | Japan |
 |---|---:|---:|---:|---:|---:|
-| 30 yrs | 98% (126) | 91% (126) | 82% (126) | 77% (92) | 90% (80) |
-| 40 yrs | 93% (116) | 76% (116) | 72% (116) | 69% (72) | 97% (60) |
-| 50 yrs | 90% (106) | 69% (106) | 58% (106) | 62% (52) | 92% (40) |
-| 60 yrs | 88% (96) | 66% (96) | 47% (96) | 50% (32) | 100% (20) |
+| 30 yrs | 94% (126) | 82% (126) | 76% (126) | 74% (92) | 86% (80) |
+| 40 yrs | 80% (116) | 71% (116) | 54% (116) | 62% (72) | 92% (60) |
+| 50 yrs | 71% (106) | 53% (106) | 37% (106) | 54% (52) | 88% (40) |
+| 60 yrs | 73% (96) | 45% (96) | 30% (96) | 34% (32) | 80% (20) |
 
 Highest withdrawal rate that succeeded in at least 95% of windows, 75/25:
 
 | Payout period | United States | World proxy (USD) | United Kingdom | Germany | Japan |
 |---|---:|---:|---:|---:|---:|
-| 30 yrs | 4.25% | 3.75% | 3.25% | – | 3.50% |
-| 40 yrs | 3.75% | 3.25% | 2.75% | 1.00% | 4.00% |
-| 50 yrs | 3.50% | 3.00% | 2.50% | 1.50% | 3.75% |
-| 60 yrs | 3.75% | 2.75% | 2.25% | 2.25% | 4.25% |
+| 30 yrs | 3.75% | 3.25% | 2.75% | – | 3.00% |
+| 40 yrs | 3.50% | 3.00% | 2.25% | – | 3.75% |
+| 50 yrs | 3.25% | 2.50% | 2.00% | 1.25% | 3.50% |
+| 60 yrs | 3.25% | 2.50% | 2.00% | 1.50% | 3.50% |
 
-For the US alone, the rate that never failed in 1871–2025 is 3.75% at 30 years and 3.25% at
-50–60 years for a 75/25 mix; a 50/50 mix at 4% survives 95% of 30-year windows but only 67%
-of 60-year ones. Full grids for every market, both withdrawal rules and every mix are in
+For the US alone, the rate that never failed in 1871–2025 is 3.25% at 30 years and 2.75% at
+60 years for a 75/25 mix; a 50/50 mix at 4% survives 89% of 30-year windows but only 41%
+of 60-year ones. The 0.8% fee costs roughly 0.4–0.5 points of safe withdrawal rate; set fees
+to zero on the page to see the gross figures. Full grids for every market, both withdrawal rules and every mix are in
 [`results/`](results/), and the cross-market view is
 [`results/markets_comparison.md`](results/markets_comparison.md).
 
@@ -100,7 +102,7 @@ Rebuild (needs `pandas`, `xlrd`, `openpyxl`):
 ```
 python3 scripts/build_data.py            # downloads Shiller's ie_data.xls
 python3 scripts/build_markets.py         # downloads JST R6, writes data/markets.*
-python3 scripts/trinity.py --market us   # one market, writes results/
+python3 scripts/trinity.py --market us   # one market, writes results/ (add --fees 0 for gross)
 python3 scripts/compare_markets.py       # cross-market summary
 ```
 

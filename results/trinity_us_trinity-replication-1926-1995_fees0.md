@@ -1,6 +1,6 @@
 # Trinity-style success rates: United States, sample 1926-1995
 
-Withdrawals at start of year; annual rebalancing; stocks = S&P Composite total return (Shiller); bonds = 10-year Treasury total return (Shiller); inflation = US CPI; no fees. Cells are % of overlapping historical start years whose portfolio ended the payout period with a positive balance; the window count in each row excludes windows that cross a gap in the data.
+Withdrawals at start of year; annual rebalancing; stocks = S&P Composite total return (Shiller); bonds = 10-year Treasury total return (Shiller); inflation = US CPI; fees 0%/yr. Cells are % of overlapping historical start years whose portfolio ended the payout period with a positive balance; the window count in each row excludes windows that cross a gap in the data.
 
 _Shiller ie_data.xls, January-to-January annual returns._
 

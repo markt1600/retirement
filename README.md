@@ -4,7 +4,7 @@ Two static pages, no build step. Open them from disk or via GitHub Pages.
 
 | Page | What it does |
 |---|---|
-| [`index.html`](index.html) | **Safe withdrawal rate.** Choose a time horizon and the markets to test (US, world proxy, UK, Germany, Japan). For each market the page replays every overlapping historical window of that length with the Trinity study's rules and reports the highest first-year withdrawal rate that survived the required share of windows, plus the 4%-rule success rate and a success-vs-rate chart. Optional portfolio value turns the rate into a first-year amount. |
+| [`index.html`](index.html) | **Safe withdrawal rate.** Choose a time horizon and the markets to test (US, world proxy, UK, Germany, Japan). For each market the page replays every overlapping historical window of that length with the Trinity study's rules and reports the highest first-year withdrawal rate that survived the required share of windows, plus the 4%-rule success rate and a success-vs-rate chart. Optional portfolio value turns the rate into a first-year amount. An **outcomes-by-age** chart shows, for one market at a chosen rate, the share of windows that are broke, below the start, 1–2×, 2–5× or above 5× in real terms at each age, with an optional mortality wedge (SSA period life table) and the probability of running out while still alive. |
 | [`trinity.html`](trinity.html) | **Full Trinity grids.** The classic period × withdrawal-rate success tables for every stock/bond mix, one market at a time, with presets for the original 1926–1995 sample. |
 
 Both pages compute everything in the browser from `data/markets.js`.
@@ -93,6 +93,7 @@ countries have no gaps.
 | `data/intl_extension.csv` | Japan / UK / Germany 2021–2025 equity, bond, CPI | MSCI / local index data (from the earlier SGD planner in this repo's history) |
 | `data/msci_world_usd.csv` | MSCI World USD total return 1970–2025 | same |
 | `data/markets.csv`, `data/markets.js` | unified annual series for `us`, `japan`, `uk`, `germany`, `world` | built from the above plus JST R6 |
+| `data/mortality.js` | annual probability of death by age and sex, ages 30–110 | SSA period life table |
 
 Rebuild (needs `pandas`, `xlrd`, `openpyxl`):
 

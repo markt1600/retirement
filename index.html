@@ -175,6 +175,34 @@
     <div class="cards" id="cards"></div>
 
     <div class="section">
+      <h3>Outcomes by age</h3>
+      <div class="meta">
+        <select id="oc_market" style="width:auto; display:inline-block; padding:2px 6px;"></select>
+        &nbsp;at&nbsp;<input type="number" id="oc_rate" value="4" step="0.05" min="0.5" max="15" style="width:70px; display:inline-block; padding:2px 6px;">%
+        <button onclick="useSafeRate()" style="background:var(--panel); border:1px solid var(--rule); font-family:var(--mono); font-size:10.5px; padding:3px 8px; cursor:pointer; margin-left:4px;">use safe rate</button>
+        &nbsp;·&nbsp;age now&nbsp;<input type="number" id="oc_age" value="45" step="1" min="18" max="100" style="width:60px; display:inline-block; padding:2px 6px;">
+        &nbsp;<select id="oc_sex" style="width:auto; display:inline-block; padding:2px 6px;"><option value="male">male</option><option value="female">female</option></select>
+        &nbsp;<label style="cursor:pointer"><input type="checkbox" id="oc_death" checked style="accent-color:var(--accent); vertical-align:middle;"> mortality wedge</label>
+      </div>
+      <div class="summary" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1px; background:var(--rule); border:1px solid var(--rule); margin-bottom:12px;">
+        <div style="background:var(--panel); padding:12px 16px;"><div class="lbl" style="margin-top:0">Success at this rate</div><div class="big" id="oc_success" style="font-size:26px">—</div></div>
+        <div style="background:var(--panel); padding:12px 16px;"><div class="lbl" style="margin-top:0">Run out while still alive</div><div class="big bad" id="oc_broke_alive" style="font-size:26px">—</div></div>
+        <div style="background:var(--panel); padding:12px 16px;"><div class="lbl" style="margin-top:0">Median real value at end</div><div class="big" id="oc_median" style="font-size:26px">—</div></div>
+      </div>
+      <div id="oc_chart" style="background:var(--panel); border:1px solid var(--rule); min-height:460px; position:relative;"></div>
+      <div class="meta" style="margin-top:8px">
+        At each age the bands sum to 100% of historical windows.
+        <span style="display:inline-block;width:10px;height:10px;background:#9b3a2a;margin:0 4px 0 8px;vertical-align:middle"></span>broke
+        <span style="display:inline-block;width:10px;height:10px;background:#d4ad6e;margin:0 4px 0 8px;vertical-align:middle"></span>below starting value
+        <span style="display:inline-block;width:10px;height:10px;background:#8aa882;margin:0 4px 0 8px;vertical-align:middle"></span>1–2×
+        <span style="display:inline-block;width:10px;height:10px;background:#4a7359;margin:0 4px 0 8px;vertical-align:middle"></span>2–5×
+        <span style="display:inline-block;width:10px;height:10px;background:#2d4a3b;margin:0 4px 0 8px;vertical-align:middle"></span>&gt;5×
+        <span style="display:inline-block;width:10px;height:10px;background:#847e72;margin:0 4px 0 8px;vertical-align:middle"></span>dead.
+        Values are real (inflation-adjusted) multiples of the starting portfolio.
+      </div>
+    </div>
+
+    <div class="section">
       <h3>Success rate by withdrawal rate</h3>
       <div class="meta" id="chart_meta">—</div>
       <div id="chart"><div id="plotly-status">Loading Plotly…</div></div>
@@ -211,6 +239,15 @@
         years on average.  Neither rule is part of the original Trinity study.
       </p>
       <p>
+        <strong>Outcomes by age.</strong> The stacked chart replays every historical window for one
+        market at the chosen withdrawal rate and, for each year of the horizon, sorts the windows by
+        the portfolio's real value relative to its start: broke, below the start, 1–2×, 2–5× and
+        above 5×.  With the mortality wedge on, each band is scaled by the probability of still
+        being alive at that age (SSA period life table, by sex) and the grey band is the cumulative
+        probability of having died.  "Run out while still alive" sums, over the years, the share of
+        windows that go broke that year times the chance of being alive to see it.
+      </p>
+      <p>
         <strong>Data.</strong> US: Shiller's S&amp;P Composite and 10-year Treasury total returns and
         US CPI, 1871→.  Japan, UK, Germany: Jordà-Schularick-Taylor Macrohistory Database, local
         equity and long government bond total returns and local CPI, 1870–2020, extended to 2025.
@@ -231,6 +268,7 @@
 </div>
 
 <script src="data/markets.js"></script>
+<script src="data/mortality.js"></script>
 <script>
 // ============================ ENGINE ============================
 const ORDER = ['us', 'world', 'uk', 'germany', 'japan'];
@@ -258,24 +296,71 @@ function cutFor(flex, ratio, k) {
   if (flex.early && k < flex.early.years && ratio < flex.early.below) c = Math.max(c, flex.early.cut);
   return c;
 }
-function runWindow(S, i0, years, alloc, rate, real, timing, feeMult, flex, stats) {
+// `path`, if given, receives the real balance (as a multiple of the start) at the
+// end of each year, index 0 = start; zeros are padded after the window breaks.
+function runWindow(S, i0, years, alloc, rate, real, timing, feeMult, flex, stats, path) {
   for (let i = i0; i < i0 + years; i++)
     if ((alloc > 0 && S.stock[i] === null) || (alloc < 1 && S.bond[i] === null) || (real && S.cpi[i] === null)) return null;
   let bal = 1, w = rate, cum = 1, cutYears = 0;
+  if (path) path.push(1);
   const draw = k => {
     const c = cutFor(flex, bal / cum, k);
     if (c > 0) cutYears++;
     bal -= w * (1 - c);
   };
+  const broke = () => {
+    if (stats) stats.cutYears = cutYears;
+    if (path) while (path.length <= years) path.push(0);
+    return 0;
+  };
   for (let k = 0; k < years; k++) {
     const i = i0 + k;
-    if (timing === 'start') { draw(k); if (bal <= 0) { if (stats) stats.cutYears = cutYears; return 0; } }
+    if (timing === 'start') { draw(k); if (bal <= 0) return broke(); }
     bal *= (1 + alloc * (S.stock[i] || 0) + (1 - alloc) * (S.bond[i] || 0)) * feeMult;
-    if (real) { w *= 1 + S.cpi[i]; cum *= 1 + S.cpi[i]; }
-    if (timing === 'end')   { draw(k); if (bal <= 0) { if (stats) stats.cutYears = cutYears; return 0; } }
+    // Track real value even under the fixed-nominal rule, so the chart is always in real terms.
+    cum *= 1 + (S.cpi[i] || 0);
+    if (real) w *= 1 + (S.cpi[i] || 0);
+    if (timing === 'end')   { draw(k); if (bal <= 0) return broke(); }
+    if (path) path.push(bal / cum);
   }
   if (stats) stats.cutYears = cutYears;
   return bal;
+}
+
+// Outcome bands by year for one market at one rate: share of scored windows in
+// each real-value bucket, plus the median real multiple.
+function outcomeBands(key, rate, cfg) {
+  const S = SERIES[key];
+  const first = Math.max(S.years[0], cfg.start || 0);
+  const paths = [];
+  for (let y = first; y + cfg.years - 1 <= S.years[S.years.length - 1]; y++) {
+    const path = [];
+    const t = runWindow(S, S.idx[y], cfg.years, cfg.alloc, rate, cfg.real, cfg.timing, cfg.feeMult, cfg.flex, null, path);
+    if (t !== null) paths.push(path);
+  }
+  const n = paths.length;
+  const bands = { broke: [], below: [], to2x: [], to5x: [], over5x: [] };
+  const median = [];
+  for (let i = 0; i <= cfg.years; i++) {
+    let b = 0, lo = 0, m2 = 0, m5 = 0, hi = 0;
+    const vals = paths.map(p => p[i]).sort((a, c) => a - c);
+    for (const v of vals) { if (v <= 0) b++; else if (v < 1) lo++; else if (v < 2) m2++; else if (v < 5) m5++; else hi++; }
+    bands.broke.push(b / n); bands.below.push(lo / n); bands.to2x.push(m2 / n); bands.to5x.push(m5 / n); bands.over5x.push(hi / n);
+    median.push(n ? vals[Math.floor(n / 2)] : NaN);
+  }
+  return { n, bands, median };
+}
+
+function cumulativeMortality(sex, startAge, years) {
+  const qx = MORTALITY[sex];
+  const arr = [0];
+  let survive = 1;
+  for (let i = 0; i < years; i++) {
+    const q = qx[startAge + i] !== undefined ? qx[startAge + i] : 0.95;
+    survive *= 1 - q;
+    arr.push(1 - survive);
+  }
+  return arr;
 }
 
 function successRate(key, rate, cfg) {
@@ -348,7 +433,62 @@ const CHART_RATES = []; for (let r = 2; r <= 6.001; r += 0.25) CHART_RATES.push(
 const LINE_COLORS = { us: '#2d4a3b', world: '#4a7359', uk: '#a07c33', germany: '#9b3a2a', japan: '#847e72' };
 
 let lastRows = [];
+let lastResults = [];
 let plotlyReady = false;
+
+function useSafeRate() {
+  const key = document.getElementById('oc_market').value;
+  const r = lastResults.find(x => x.key === key);
+  if (r && r.safe !== null) { document.getElementById('oc_rate').value = r.safe.toFixed(2); render(); }
+}
+
+const BAND_COLORS = { broke: '#9b3a2a', below: '#d4ad6e', to2x: '#8aa882', to5x: '#4a7359', over5x: '#2d4a3b', dead: '#847e72' };
+function renderOutcomes(cfg) {
+  const sel = document.getElementById('oc_market');
+  const prev = sel.value;
+  sel.innerHTML = cfg.markets.map(k => `<option value="${k}">${MARKETS[k].label}</option>`).join('');
+  sel.value = cfg.markets.includes(prev) ? prev : cfg.markets[0];
+  const key = sel.value;
+  const rate = (parseFloat(document.getElementById('oc_rate').value) || 4) / 100;
+  const age = parseInt(document.getElementById('oc_age').value) || 45;
+  const sex = document.getElementById('oc_sex').value;
+  const showDeath = document.getElementById('oc_death').checked;
+
+  const oc = outcomeBands(key, rate, cfg);
+  const mort = cumulativeMortality(sex, age, cfg.years);
+  const successEl = document.getElementById('oc_success');
+  if (!oc.n) {
+    successEl.textContent = '—'; document.getElementById('oc_broke_alive').textContent = '—'; document.getElementById('oc_median').textContent = '—';
+    return;
+  }
+  const success = 100 * (1 - oc.bands.broke[cfg.years]);
+  successEl.textContent = success.toFixed(0) + '%';
+  successEl.className = 'big' + (success < cfg.threshold ? ' bad' : '');
+  // P(run out at some point while still alive): broke is absorbing, so the newly-broke share
+  // each year is the increase in the broke band, weighted by P(alive at the start of that year).
+  let brokeAlive = 0, prevBroke = 0;
+  for (let i = 1; i <= cfg.years; i++) {
+    brokeAlive += Math.max(0, oc.bands.broke[i] - prevBroke) * (1 - mort[i - 1]);
+    prevBroke = oc.bands.broke[i];
+  }
+  document.getElementById('oc_broke_alive').textContent = (100 * brokeAlive).toFixed(1) + '%';
+  document.getElementById('oc_median').textContent = oc.median[cfg.years].toFixed(2) + '×';
+
+  if (!plotlyReady) return;
+  const ages = []; for (let i = 0; i <= cfg.years; i++) ages.push(age + i);
+  const scale = arr => arr.map((v, i) => 100 * v * (showDeath ? 1 - mort[i] : 1));
+  const mk = (band, name) => ({ x: ages, y: scale(oc.bands[band]), name, type: 'scatter', mode: 'none', stackgroup: 'one', fillcolor: BAND_COLORS[band], hovertemplate: '%{y:.0f}%' });
+  const traces = [mk('broke', 'Broke'), mk('below', 'Below start'), mk('to2x', '1–2×'), mk('to5x', '2–5×'), mk('over5x', '>5×')];
+  if (showDeath) traces.push({ x: ages, y: mort.map(v => 100 * v), name: 'Dead', type: 'scatter', mode: 'none', stackgroup: 'one', fillcolor: BAND_COLORS.dead, hovertemplate: '%{y:.0f}%' });
+  const mono = { family: "'IBM Plex Mono', monospace", size: 11 };
+  Plotly.react('oc_chart', traces, {
+    margin: { l: 50, r: 20, t: 20, b: 50 }, height: 460, paper_bgcolor: '#fff', plot_bgcolor: '#fff',
+    font: { family: "'IBM Plex Sans', sans-serif", size: 12, color: '#1a1a1a' }, hovermode: 'x unified',
+    xaxis: { title: { text: 'Age', font: mono }, tickfont: mono, gridcolor: '#ebe5d4', zeroline: false, showline: true, linecolor: '#e0d9c8' },
+    yaxis: { title: { text: `% of ${oc.n} windows · ${MARKETS[key].label} at ${(rate * 100).toFixed(2)}%`, font: mono }, tickfont: mono, range: [0, 100], ticksuffix: '%', gridcolor: '#ebe5d4', zeroline: false, showline: true, linecolor: '#e0d9c8' },
+    showlegend: false
+  }, { displayModeBar: false, responsive: true });
+}
 
 function render() {
   const cfg = getCfg();
@@ -392,6 +532,8 @@ function render() {
     </div>`;
   }
   document.getElementById('cards').innerHTML = h;
+  lastResults = results;
+  renderOutcomes(cfg);
 
   // --- table + chart data ---
   const byMarket = {};
@@ -453,7 +595,8 @@ function downloadCSV() {
 }
 function copyURL() {
   const qs = new URLSearchParams();
-  for (const id of ['years','threshold','portfolio','alloc','model','timing','fees','start','cut_pct','cut_below','early_cut_pct','early_cut_below','early_years']) qs.set(id, document.getElementById(id).value);
+  for (const id of ['years','threshold','portfolio','alloc','model','timing','fees','start','cut_pct','cut_below','early_cut_pct','early_cut_below','early_years','oc_market','oc_rate','oc_age','oc_sex']) qs.set(id, document.getElementById(id).value);
+  qs.set('oc_death', document.getElementById('oc_death').checked);
   qs.set('flex', document.getElementById('flex').checked);
   qs.set('flex_early', document.getElementById('flex_early').checked);
   qs.set('markets', getCfg().markets.join(','));
@@ -467,6 +610,7 @@ function loadFromURL() {
   for (const [k, v] of qs) {
     if (k === 'markets') { const set = new Set(v.split(',')); ORDER.forEach(key => document.getElementById('m_' + key).checked = set.has(key)); continue; }
     const el = document.getElementById(k); if (!el) continue;
+    if (k === 'oc_market') { el.innerHTML = `<option value="${v}">${v}</option>`; el.value = v; continue; }
     if (el.type === 'checkbox') el.checked = (v === 'true'); else el.value = v;
   }
 }

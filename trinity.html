@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trinity Study, Longer Horizons</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf7f1;
+    --panel: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #767063;
+    --rule: #e0d9c8;
+    --rule-soft: #ebe5d4;
+    --accent: #2c4a3b;
+    --danger: #a14a3a;
+    --gold: #a07c33;
+    --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+    --sans:  'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono:  'IBM Plex Mono', 'Menlo', monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px; line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+  }
+  body {
+    background-image:
+      radial-gradient(circle at 25% 15%, rgba(160, 124, 51, 0.04) 0%, transparent 50%),
+      radial-gradient(circle at 75% 85%, rgba(44, 74, 59, 0.03) 0%, transparent 50%);
+  }
+  .container { max-width: 1400px; margin: 0 auto; padding: 28px 36px 80px; }
+  header { border-bottom: 1px solid var(--rule); padding-bottom: 20px; margin-bottom: 28px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+  }
+  .nav { float: right; font-family: var(--mono); font-size: 11px; }
+  .nav a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
+  h1 { font-family: var(--serif); font-weight: 500; font-size: 38px; line-height: 1.1; margin: 0; letter-spacing: -0.015em; }
+  h1 em { font-style: italic; color: var(--accent); }
+  .subtitle { color: var(--muted); margin-top: 8px; max-width: 760px; font-size: 14.5px; }
+
+  .grid { display: grid; grid-template-columns: 340px 1fr; gap: 32px; }
+  @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--panel); border: 1px solid var(--rule); padding: 22px 24px; }
+  .panel h2 {
+    font-family: var(--serif); font-weight: 500; font-size: 14px; letter-spacing: 0.02em;
+    margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--rule-soft);
+    text-transform: uppercase; color: var(--muted); font-style: italic;
+  }
+  .panel + .panel { margin-top: 18px; }
+  .row { display: grid; grid-template-columns: 1fr 120px; align-items: center; gap: 12px; padding: 5px 0; }
+  .row.wide { grid-template-columns: 1fr; }
+  .row label { color: var(--ink); font-size: 13px; }
+  .row .hint { color: var(--muted); font-size: 11px; margin-left: 6px; }
+  input[type=number], input[type=text], select {
+    width: 100%; padding: 6px 8px; border: 1px solid var(--rule); background: var(--bg);
+    font-family: var(--mono); font-size: 12.5px; color: var(--ink);
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); background: white; }
+  .err { color: var(--danger); font-family: var(--mono); font-size: 11px; margin-top: 6px; display: none; }
+
+  .summary {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--rule); border: 1px solid var(--rule); margin-bottom: 24px;
+  }
+  .summary > div { background: var(--panel); padding: 14px 18px; }
+  .stat-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 4px; }
+  .stat-value { font-family: var(--serif); font-size: 26px; font-weight: 500; line-height: 1.1; }
+  .stat-value.success { color: var(--accent); }
+  .stat-value.warn { color: var(--gold); }
+  .stat-value.bad { color: var(--danger); }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+
+  .section { margin-top: 26px; }
+  .section h3 {
+    font-family: var(--serif); font-weight: 500; font-size: 22px; margin: 0 0 4px; letter-spacing: -0.005em;
+  }
+  .section .meta { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+  table.tri {
+    border-collapse: collapse; width: 100%; background: var(--panel);
+    border: 1px solid var(--rule); font-family: var(--mono); font-size: 12px;
+  }
+  table.tri th, table.tri td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--rule-soft); }
+  table.tri th { font-weight: 500; color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; }
+  table.tri td:first-child, table.tri th:first-child { text-align: left; white-space: nowrap; }
+  table.tri td.n { color: var(--muted); font-size: 10.5px; }
+  td.ok   { background: #dfe8de; color: #1f3b2c; }
+  td.warn { background: #f2e6c9; color: #5a4413; }
+  td.bad  { background: #efd3cb; color: #6b2416; }
+  td.worst{ background: #e2b7ac; color: #521a0f; }
+  td.cell { cursor: help; }
+  .controls { margin-top: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .controls button {
+    background: var(--panel); border: 1px solid var(--rule); font-family: var(--mono);
+    font-size: 11px; padding: 6px 12px; cursor: pointer; color: var(--ink);
+  }
+  .controls button:hover { border-color: var(--accent); }
+  #chart { background: var(--panel); border: 1px solid var(--rule); min-height: 420px; position: relative; margin-top: 12px; }
+  #plotly-status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+  .legend-note {
+    margin-top: 18px; padding: 16px 20px; background: var(--panel); border: 1px solid var(--rule);
+    font-size: 12.5px; color: var(--muted); line-height: 1.6;
+  }
+  .legend-note strong { color: var(--ink); font-weight: 500; }
+  .legend-note .swatch { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: middle; }
+  .legend-note p { margin: 8px 0 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <div class="nav"><a href="index.html">← Retirement planner (SGD)</a></div>
+  <div class="eyebrow">Trinity study re-run · US 1871→ · Japan · UK · Germany · World proxy</div>
+  <h1>Trinity Study, <em>Longer Horizons</em></h1>
+  <p class="subtitle">
+    The 1998 Trinity study asked how often a stock/bond portfolio survived 15–30 years of
+    withdrawals over 1926–1995 in the US.  This page re-runs the same experiment on Shiller's
+    S&amp;P Composite series from 1871 to <span id="hdr_last">2025</span>, extends the payout
+    periods to 35, 40, 45, 50 and 60 years, and repeats it for Japan, the UK, Germany and a
+    global-equity proxy.  Every cell is computed live in your browser.
+  </p>
+</header>
+
+<div class="grid">
+  <!-- ===================== LEFT: INPUTS ===================== -->
+  <div>
+    <div class="panel">
+      <h2>Market</h2>
+      <div class="row wide">
+        <select id="market">
+          <option value="us">United States · S&amp;P Composite (1871→)</option>
+          <option value="world">World equity proxy, USD · VWRA stand-in (1871→)</option>
+          <option value="uk">United Kingdom · GBP (1871→)</option>
+          <option value="germany">Germany · DEM/EUR (1871→)</option>
+          <option value="japan">Japan · JPY (1886→)</option>
+        </select>
+      </div>
+      <div class="row wide"><div class="stat-sub" id="market_note" style="white-space:normal; line-height:1.5"></div></div>
+    </div>
+
+    <div class="panel">
+      <h2>Sample</h2>
+      <div class="row">
+        <label>First start year</label>
+        <input type="number" id="start" value="1871" step="1">
+      </div>
+      <div class="row">
+        <label>Last year of data</label>
+        <input type="number" id="end" value="2025" step="1">
+      </div>
+      <div class="row wide">
+        <label>Payout periods <span class="hint">years, comma-separated</span></label>
+        <input type="text" id="periods" value="15,20,25,30,35,40,45,50,60">
+      </div>
+      <div class="row wide">
+        <label>Withdrawal rates <span class="hint">% of initial portfolio</span></label>
+        <input type="text" id="rates" value="3,3.5,4,4.5,5,6,7,8,9,10,11,12">
+      </div>
+      <div class="row wide">
+        <label>Stock allocations <span class="hint">% in equities, rest in govt bonds</span></label>
+        <input type="text" id="allocs" value="100,75,50,25,0">
+      </div>
+      <div class="err" id="err"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Withdrawal rule</h2>
+      <div class="row">
+        <label>Withdrawals</label>
+        <select id="model">
+          <option value="real">Inflation-adjusted</option>
+          <option value="nominal">Fixed nominal</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Timing</label>
+        <select id="timing">
+          <option value="start">Start of year</option>
+          <option value="end">End of year</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Fees <span class="hint">% per yr</span></label>
+        <input type="number" id="fees" value="0" step="0.05" min="0">
+      </div>
+      <div class="row">
+        <label>"Safe" threshold <span class="hint">% success</span></label>
+        <input type="number" id="threshold" value="95" step="1" min="50" max="100">
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Presets</h2>
+      <div class="controls" style="margin-top:0">
+        <button onclick="preset('trinity')">Trinity 1926–1995</button>
+        <button onclick="preset('ibbotson')">1926→ today</button>
+        <button onclick="preset('full')">Full history</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== RIGHT: RESULTS ===================== -->
+  <div>
+    <div class="summary">
+      <div>
+        <div class="stat-label">4% rule · 30 yrs · 50/50</div>
+        <div class="stat-value" id="s_30">—</div>
+        <div class="stat-sub" id="s_30_sub">success rate</div>
+      </div>
+      <div>
+        <div class="stat-label">4% rule · 60 yrs · 75/25</div>
+        <div class="stat-value" id="s_60">—</div>
+        <div class="stat-sub" id="s_60_sub">success rate</div>
+      </div>
+      <div>
+        <div class="stat-label">Safe rate · 60 yrs · 75/25</div>
+        <div class="stat-value" id="s_swr">—</div>
+        <div class="stat-sub" id="s_swr_sub">at threshold</div>
+      </div>
+      <div>
+        <div class="stat-label">Windows</div>
+        <div class="stat-value" id="s_win">—</div>
+        <div class="stat-sub" id="s_win_sub">overlapping start years</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Highest withdrawal rate that clears the threshold</h3>
+      <div class="meta" id="swr_meta">—</div>
+      <div id="swr_table"></div>
+    </div>
+
+    <div class="section">
+      <h3>Success rate by payout period</h3>
+      <div class="meta">
+        one line per allocation, at withdrawal rate
+        <select id="chart_rate" style="width:auto; display:inline-block; padding:2px 6px;"></select>
+      </div>
+      <div id="chart"><div id="plotly-status">Loading Plotly…</div></div>
+    </div>
+
+    <div id="tables"></div>
+
+    <div class="controls">
+      <button onclick="downloadCSV()">Download CSV</button>
+      <button onclick="copyURL()">Copy shareable URL</button>
+    </div>
+
+    <div class="legend-note">
+      <strong>How to read this.</strong> Each cell is the share of overlapping historical start
+      years in which the portfolio still had money at the end of the payout period.
+      <span class="swatch" style="background:#dfe8de"></span><strong>at or above threshold</strong>;
+      <span class="swatch" style="background:#f2e6c9"></span><strong>75% up to threshold</strong>;
+      <span class="swatch" style="background:#efd3cb"></span><strong>50–75%</strong>;
+      <span class="swatch" style="background:#e2b7ac"></span><strong>below 50%</strong>.
+      Hover a cell to see which start years failed.
+      <p>
+        <strong>Mechanics.</strong> Annual steps, rebalanced to the target mix each year.  The
+        first withdrawal is the rate × starting balance; under the inflation-adjusted rule it then
+        grows with US CPI, under the nominal rule it stays fixed.  A period succeeds if the balance
+        is still positive at the end.  For the US this mirrors Cooley, Hubbard &amp; Walz (1998)
+        except that bonds are 10-year Treasuries (Shiller's constant-maturity total-return series)
+        rather than long-term high-grade corporates, and the stock series is Shiller's S&amp;P
+        Composite (monthly-average prices, January to January) rather than Ibbotson's month-end
+        S&amp;P 500.  Japan, the UK and Germany use the Jordà-Schularick-Taylor Macrohistory
+        Database (equity and long-term government bond total returns, local CPI, all in local
+        currency) through 2020, extended to 2025 with MSCI / local index data.  The world proxy is a
+        GDP-weighted average of the 18 JST countries' USD equity returns up to 1969, then MSCI World
+        in USD, paired with US Treasuries and US CPI (a USD investor holding a global fund).
+      </p>
+      <p>
+        <strong>Gaps and wars.</strong> Japanese equity returns are missing for 1946–47 and German
+        bond returns for 1944–48 (markets closed, then currency reform).  A window that needs a
+        missing value is left out of the count rather than scored, so wartime start years are
+        under-represented for those two markets.  Germany's 1923 hyperinflation is in the data: under
+        the fixed-nominal rule any withdrawal becomes worthless and "succeeds", so read Germany with
+        the inflation-adjusted rule only.
+      </p>
+      <p>
+        <strong>Longer periods, fewer independent samples.</strong> 60-year windows starting
+        1871–1966 overlap heavily: there are really only two or three non-overlapping 60-year
+        histories in the data.  Treat the long-horizon rows as "what has happened", not as a
+        probability.  The 1871–1925 stretch also predates the S&amp;P 500 itself; Shiller splices
+        Cowles Commission data for those years.
+      </p>
+      <p>
+        <strong>Data.</strong> <code>data/markets.js</code>, generated by
+        <code>scripts/build_data.py</code> and <code>scripts/build_markets.py</code>.  The same tables
+        can be produced offline with <code>scripts/trinity.py --market …</code>; see the README.
+      </p>
+    </div>
+  </div>
+</div>
+</div>
+
+<script src="data/markets.js"></script>
+<script>
+// ============================ ENGINE ============================
+let M, YEARS, STOCK, BOND, CPI, IDX;
+function loadMarket(key) {
+  M = MARKETS[key];
+  YEARS = [];
+  for (let y = M.first_year; y <= M.last_year; y++) YEARS.push(y);
+  const pct = v => (v === null || v === undefined) ? null : v / 100;
+  STOCK = YEARS.map(y => pct(M.stock[y]));
+  BOND  = YEARS.map(y => pct(M.bond[y]));
+  CPI   = YEARS.map(y => pct(M.cpi[y]));
+  IDX = {}; YEARS.forEach((y, i) => IDX[y] = i);
+}
+
+// One payout period.  Returns terminal balance per 1.0 initial (0 = failed,
+// null = the window crosses a gap in a series it needs and cannot be scored).
+function runWindow(i0, years, alloc, rate, real, timing, feeMult) {
+  let bal = 1, w = rate;
+  // Check the whole window for gaps first: a window is scored or skipped
+  // regardless of when it would have run out of money.
+  for (let i = i0; i < i0 + years; i++)
+    if ((alloc > 0 && STOCK[i] === null) || (alloc < 1 && BOND[i] === null) || (real && CPI[i] === null)) return null;
+  for (let k = 0; k < years; k++) {
+    const i = i0 + k;
+    if (timing === 'start') { bal -= w; if (bal <= 0) return 0; }
+    bal *= (1 + alloc * (STOCK[i] || 0) + (1 - alloc) * (BOND[i] || 0)) * feeMult;
+    if (timing === 'end')   { bal -= w; if (bal <= 0) return 0; }
+    if (real) w *= 1 + CPI[i];
+  }
+  return bal;
+}
+
+function startsFor(p, start, end) {
+  const s = [];
+  for (let y = start; y + p - 1 <= end; y++) if (IDX[y] !== undefined && IDX[y + p - 1] !== undefined) s.push(y);
+  return s;
+}
+
+// success % and failing start years for one (period, alloc, rate)
+function successRate(p, alloc, rate, cfg) {
+  const starts = startsFor(p, cfg.start, cfg.end);
+  const fails = [];
+  const terminals = [];
+  let skipped = 0;
+  for (const y of starts) {
+    const t = runWindow(IDX[y], p, alloc, rate, cfg.real, cfg.timing, cfg.feeMult);
+    if (t === null) { skipped++; continue; }
+    terminals.push(t);
+    if (t <= 0) fails.push(y);
+  }
+  terminals.sort((a, b) => a - b);
+  const n = terminals.length;
+  return {
+    n, skipped, fails,
+    pct: n ? 100 * (n - fails.length) / n : NaN,
+    medianTerminal: n ? terminals[Math.floor(n / 2)] : NaN
+  };
+}
+
+const SWR_GRID = [];
+for (let r = 1; r <= 12.001; r += 0.25) SWR_GRID.push(r);
+function maxSafeRate(p, alloc, cfg, threshold) {
+  let best = null;
+  for (const r of SWR_GRID) {
+    const s = successRate(p, alloc, r / 100, cfg);
+    if (s.n === 0) return null;
+    if (s.pct >= threshold) best = r; else break;
+  }
+  return best;
+}
+
+// ============================ UI ============================
+function parseList(id) {
+  return document.getElementById(id).value.split(',').map(s => parseFloat(s.trim())).filter(v => !isNaN(v));
+}
+function getCfg() {
+  const feesPct = parseFloat(document.getElementById('fees').value) || 0;
+  return {
+    market: document.getElementById('market').value,
+    start: parseInt(document.getElementById('start').value),
+    end: parseInt(document.getElementById('end').value),
+    periods: parseList('periods').map(v => Math.round(v)).filter(v => v > 0),
+    rates: parseList('rates').filter(v => v > 0),
+    allocs: parseList('allocs').filter(v => v >= 0 && v <= 100),
+    real: document.getElementById('model').value === 'real',
+    timing: document.getElementById('timing').value,
+    feeMult: 1 - feesPct / 100,
+    threshold: parseFloat(document.getElementById('threshold').value) || 95
+  };
+}
+function cellClass(pct, threshold) {
+  if (pct >= threshold) return 'ok';
+  if (pct >= 75) return 'warn';
+  if (pct >= 50) return 'bad';
+  return 'worst';
+}
+function fmtPct(v) { return isNaN(v) ? '—' : v.toFixed(0) + '%'; }
+function fmtRate(v) { return v === null ? '—' : v.toFixed(2) + '%'; }
+
+let lastRows = [];
+let plotlyReady = false;
+
+function render() {
+  const cfg = getCfg();
+  loadMarket(cfg.market);
+  document.getElementById('market_note').textContent =
+    `${M.stock_label} · ${M.bond_label} · ${M.cpi_label}. ${M.notes}`;
+  const err = document.getElementById('err');
+  const problems = [];
+  if (cfg.start < M.first_year || cfg.end > M.last_year || cfg.start >= cfg.end)
+    problems.push(`Sample for ${M.label} must lie within ${M.first_year}–${M.last_year}.`);
+  if (!cfg.periods.length || !cfg.rates.length || !cfg.allocs.length)
+    problems.push('Need at least one period, rate and allocation.');
+  err.textContent = problems.join(' ');
+  err.style.display = problems.length ? 'block' : 'none';
+  if (problems.length) return;
+
+  const modelLabel = cfg.real ? 'inflation-adjusted' : 'fixed nominal';
+  lastRows = [];
+
+  // --- headline stats ---
+  const s30 = successRate(30, 0.5, 0.04, cfg);
+  const s60 = successRate(60, 0.75, 0.04, cfg);
+  const swr60 = maxSafeRate(60, 0.75, cfg, cfg.threshold);
+  setStat('s_30', s30.pct, cfg.threshold, `${s30.n} windows, ${modelLabel}`);
+  setStat('s_60', s60.pct, cfg.threshold, s60.n ? `${s60.n} windows, ${modelLabel}` : 'sample too short');
+  const swrEl = document.getElementById('s_swr');
+  swrEl.textContent = fmtRate(swr60);
+  swrEl.className = 'stat-value';
+  document.getElementById('s_swr_sub').textContent = `≥${cfg.threshold}% success, ${modelLabel}`;
+  const longest = Math.max(...cfg.periods);
+  const sl = successRate(longest, 0.75, 0.04, cfg);
+  document.getElementById('s_win').textContent = sl.n;
+  document.getElementById('s_win_sub').textContent = `${longest}-yr windows in ${cfg.start}–${cfg.end}` + (sl.skipped ? ` (${sl.skipped} skipped)` : '');
+
+  // --- SWR table ---
+  let h = '<table class="tri"><tr><th>Payout period</th>';
+  for (const a of cfg.allocs) h += `<th>${a}/${100 - a}</th>`;
+  h += '</tr>';
+  for (const p of cfg.periods) {
+    const n = startsFor(p, cfg.start, cfg.end).length;
+    if (!n) continue;
+    h += `<tr><td>${p} yrs <span class="n">(${n})</span></td>`;
+    for (const a of cfg.allocs) {
+      const r100 = maxSafeRate(p, a / 100, cfg, 100);
+      const rT = maxSafeRate(p, a / 100, cfg, cfg.threshold);
+      h += `<td title="never failed / cleared ${cfg.threshold}%">${fmtRate(r100)} <span class="n">/</span> ${fmtRate(rT)}</td>`;
+    }
+    h += '</tr>';
+  }
+  h += '</table>';
+  document.getElementById('swr_table').innerHTML = h;
+  document.getElementById('swr_meta').textContent =
+    `never failed / cleared ${cfg.threshold}% · ${modelLabel} withdrawals · 0.25% grid · stocks/bonds mix in header`;
+
+  // --- per-allocation grids ---
+  let t = '';
+  const byRate = {};   // rate -> alloc -> [pct per period]
+  for (const a of cfg.allocs) {
+    t += `<div class="section"><h3>${a}% stocks / ${100 - a}% bonds</h3>`;
+    t += `<div class="meta">${modelLabel} withdrawals · sample ${cfg.start}–${cfg.end} · withdrawals at ${cfg.timing} of year</div>`;
+    t += '<table class="tri"><tr><th>Payout period</th>';
+    for (const r of cfg.rates) t += `<th>${r}%</th>`;
+    t += '</tr>';
+    for (const p of cfg.periods) {
+      const n = startsFor(p, cfg.start, cfg.end).length;
+      if (!n) continue;
+      let rowCells = '', scored = null;
+      for (const r of cfg.rates) {
+        const s = successRate(p, a / 100, r / 100, cfg);
+        scored = s.n;
+        lastRows.push({ period: p, alloc: a, rate: r, n: s.n, fails: s.fails.length, pct: s.pct,
+                        median: s.medianTerminal, failed: s.fails.join(' ') });
+        (byRate[r] = byRate[r] || {})[a] = byRate[r][a] || {};
+        byRate[r][a][p] = s.pct;
+        const tip = (s.fails.length ? `failed starts: ${s.fails.join(', ')}` : 'never failed') +
+                    (s.skipped ? ` · ${s.skipped} windows skipped (data gap)` : '');
+        rowCells += isNaN(s.pct) ? '<td>—</td>'
+          : `<td class="cell ${cellClass(s.pct, cfg.threshold)}" title="${tip}">${s.pct.toFixed(0)}</td>`;
+      }
+      t += `<tr><td>${p} yrs <span class="n">(${scored})</span></td>${rowCells}</tr>`;
+    }
+    t += '</table></div>';
+  }
+  document.getElementById('tables').innerHTML = t;
+
+  // --- chart ---
+  const sel = document.getElementById('chart_rate');
+  const prev = sel.value;
+  sel.innerHTML = cfg.rates.map(r => `<option value="${r}">${r}%</option>`).join('');
+  sel.value = cfg.rates.includes(parseFloat(prev)) ? prev : (cfg.rates.includes(4) ? '4' : cfg.rates[0]);
+  drawChart(cfg, byRate);
+}
+
+function setStat(id, pct, threshold, sub) {
+  const el = document.getElementById(id);
+  el.textContent = fmtPct(pct);
+  el.className = 'stat-value ' + (isNaN(pct) ? '' : pct >= threshold ? 'success' : pct >= 75 ? 'warn' : 'bad');
+  document.getElementById(id + '_sub').textContent = sub;
+}
+
+const LINE_COLORS = ['#2d4a3b', '#4a7359', '#8aa882', '#a07c33', '#9b3a2a', '#847e72', '#1a1a1a'];
+function drawChart(cfg, byRate) {
+  if (!plotlyReady) return;
+  const r = parseFloat(document.getElementById('chart_rate').value);
+  const data = byRate[r] || {};
+  const periods = cfg.periods.filter(p => startsFor(p, cfg.start, cfg.end).length);
+  const traces = cfg.allocs.map((a, i) => ({
+    x: periods, y: periods.map(p => data[a] ? data[a][p] : null),
+    name: `${a}/${100 - a}`, type: 'scatter', mode: 'lines+markers',
+    line: { color: LINE_COLORS[i % LINE_COLORS.length], width: 2 },
+    marker: { size: 6 }
+  }));
+  traces.push({ x: [Math.min(...periods), Math.max(...periods)], y: [cfg.threshold, cfg.threshold],
+    name: 'threshold', mode: 'lines', line: { color: '#a14a3a', width: 1, dash: 'dot' }, hoverinfo: 'skip' });
+  const layout = {
+    margin: { l: 50, r: 20, t: 20, b: 50 }, height: 420,
+    paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff',
+    font: { family: "'IBM Plex Sans', sans-serif", size: 12, color: '#1a1a1a' },
+    hovermode: 'x unified',
+    xaxis: { title: { text: 'Payout period (years)', font: { size: 11, family: "'IBM Plex Mono', monospace" } },
+             tickfont: { family: "'IBM Plex Mono', monospace", size: 11 }, gridcolor: '#ebe5d4', zeroline: false,
+             showline: true, linecolor: '#e0d9c8', tickvals: periods },
+    yaxis: { title: { text: `success rate at ${r}% withdrawal`, font: { size: 11, family: "'IBM Plex Mono', monospace" } },
+             tickfont: { family: "'IBM Plex Mono', monospace", size: 11 }, range: [0, 102], ticksuffix: '%',
+             gridcolor: '#ebe5d4', zeroline: false, showline: true, linecolor: '#e0d9c8' },
+    legend: { orientation: 'h', y: -0.2, font: { family: "'IBM Plex Mono', monospace", size: 11 } }
+  };
+  const status = document.getElementById('plotly-status');
+  if (status) status.remove();
+  Plotly.react('chart', traces, layout, { displayModeBar: false, responsive: true });
+}
+
+function preset(name) {
+  const set = (id, v) => document.getElementById(id).value = v;
+  const mk = MARKETS[document.getElementById('market').value];
+  if (name === 'trinity') {
+    set('start', 1926); set('end', 1995); set('periods', '15,20,25,30');
+    set('rates', '3,4,5,6,7,8,9,10,11,12'); set('allocs', '100,75,50,25,0');
+  } else if (name === 'ibbotson') {
+    set('start', 1926); set('end', mk.last_year); set('periods', '15,20,25,30,35,40,45,50,60');
+    set('rates', '3,3.5,4,4.5,5,6,7,8,9,10,11,12'); set('allocs', '100,75,50,25,0');
+  } else {
+    set('start', mk.first_year); set('end', mk.last_year); set('periods', '15,20,25,30,35,40,45,50,60');
+    set('rates', '3,3.5,4,4.5,5,6,7,8,9,10,11,12'); set('allocs', '100,75,50,25,0');
+  }
+  render();
+}
+
+function downloadCSV() {
+  if (!lastRows.length) return;
+  const cfg = getCfg();
+  const rows = [['market','sample_start','sample_end','model','timing','fees_pct','period','stock_pct','rate_pct',
+                 'n_windows','n_failed','success_pct','median_terminal_per_1000','failed_starts'].join(',')];
+  for (const r of lastRows) {
+    rows.push([cfg.market, cfg.start, cfg.end, cfg.real ? 'inflation_adjusted' : 'nominal', cfg.timing,
+               ((1 - cfg.feeMult) * 100).toFixed(2), r.period, r.alloc, r.rate, r.n, r.fails,
+               r.pct.toFixed(1), (r.median * 1000).toFixed(0), '"' + r.failed + '"'].join(','));
+  }
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `trinity_${cfg.market}_${cfg.start}-${cfg.end}.csv`;
+  a.click();
+}
+
+function copyURL() {
+  const qs = new URLSearchParams();
+  for (const id of ['market','start','end','periods','rates','allocs','model','timing','fees','threshold'])
+    qs.set(id, document.getElementById(id).value);
+  const url = location.origin + location.pathname + '?' + qs.toString();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => alert('URL copied to clipboard.'), () => prompt('Copy this URL:', url));
+  } else prompt('Copy this URL:', url);
+}
+
+function loadFromURL() {
+  const qs = new URLSearchParams(location.search);
+  for (const [k, v] of qs) { const el = document.getElementById(k); if (el) el.value = v; }
+}
+
+function loadPlotly(urls, onReady, onFail) {
+  if (urls.length === 0) { onFail(); return; }
+  const s = document.createElement('script');
+  s.src = urls[0]; s.charset = 'utf-8';
+  s.onload = () => { if (typeof window.Plotly !== 'undefined') onReady(); else loadPlotly(urls.slice(1), onReady, onFail); };
+  s.onerror = () => loadPlotly(urls.slice(1), onReady, onFail);
+  document.head.appendChild(s);
+}
+
+// ============================ INIT ============================
+document.getElementById('hdr_last').textContent = MARKETS.us.last_year;
+document.getElementById('end').value = MARKETS.us.last_year;
+document.querySelectorAll('input, select').forEach(el => { if (el.id && el.id !== 'chart_rate' && el.id !== 'market') el.addEventListener('change', render); });
+document.getElementById('chart_rate').addEventListener('change', render);
+document.getElementById('market').addEventListener('change', () => preset('full'));
+loadFromURL();
+render();   // tables do not need Plotly
+loadPlotly([
+  'https://cdn.plot.ly/plotly-3.5.1.min.js',
+  'https://cdn.jsdelivr.net/npm/plotly.js-dist-min@3.5.1/plotly.min.js',
+  'https://unpkg.com/plotly.js-dist-min@3.5.1/plotly.min.js',
+  'https://cdn.plot.ly/plotly-2.27.0.min.js'
+], () => { plotlyReady = true; render(); }, () => {
+  document.getElementById('plotly-status').innerHTML = 'Could not load Plotly from any CDN.<br>Tables above and below still work.';
+});
+</script>
+</body>
+</html>

@@ -200,6 +200,36 @@
     </div>
 
     <div class="panel">
+      <h2>Spending flexibility</h2>
+      <div class="row wide">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer"><input type="checkbox" id="flex" style="accent-color: var(--accent); margin:0">Cut spending in bad years</label>
+      </div>
+      <div class="row">
+        <label>Cut withdrawal by <span class="hint">%</span></label>
+        <input type="number" id="cut_pct" value="20" step="5" min="0" max="100">
+      </div>
+      <div class="row">
+        <label>When portfolio is below <span class="hint">% of start, real</span></label>
+        <input type="number" id="cut_below" value="80" step="5" min="0" max="200">
+      </div>
+      <div class="row wide" style="margin-top:8px; border-top:1px dashed var(--rule); padding-top:10px">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer"><input type="checkbox" id="flex_early" style="accent-color: var(--accent); margin:0">Early-years rule (sequence risk)</label>
+      </div>
+      <div class="row">
+        <label>Cut withdrawal by <span class="hint">%</span></label>
+        <input type="number" id="early_cut_pct" value="10" step="5" min="0" max="100">
+      </div>
+      <div class="row">
+        <label>When portfolio is below <span class="hint">% of start, real</span></label>
+        <input type="number" id="early_cut_below" value="90" step="5" min="0" max="200">
+      </div>
+      <div class="row">
+        <label>During the first <span class="hint">years</span></label>
+        <input type="number" id="early_years" value="10" step="1" min="1">
+      </div>
+    </div>
+
+    <div class="panel">
       <h2>Presets</h2>
       <div class="controls" style="margin-top:0">
         <button onclick="preset('trinity')">Trinity 1926–1995</button>
@@ -279,6 +309,14 @@
         in USD, paired with US Treasuries and US CPI (a USD investor holding a global fund).
       </p>
       <p>
+        <strong>Spending flexibility (optional).</strong> With the cut enabled, any year in which the
+        portfolio is below the chosen share of its starting value (real terms under the
+        inflation-adjusted rule, nominal under the fixed rule) the withdrawal is reduced by the chosen
+        percentage, and restored once the portfolio recovers.  The early-years rule is a second,
+        usually higher line that applies only in the first Y years; when both trigger, the larger cut
+        is used.  Neither is part of the original study.
+      </p>
+      <p>
         <strong>Gaps and wars.</strong> Japanese equity returns are missing for 1946–47 and German
         bond returns for 1944–48 (markets closed, then currency reform).  A window that needs a
         missing value is left out of the count rather than scored, so wartime start years are
@@ -320,18 +358,31 @@ function loadMarket(key) {
 
 // One payout period.  Returns terminal balance per 1.0 initial (0 = failed,
 // null = the window crosses a gap in a series it needs and cannot be scored).
-function runWindow(i0, years, alloc, rate, real, timing, feeMult) {
-  let bal = 1, w = rate;
+// Spending flexibility.  flex = { cut, below, early: { cut, below, years } | null } | null.
+// Cut the withdrawal by `cut` in any year the portfolio (real terms under the
+// inflation-adjusted rule, nominal otherwise) is below `below` × its start; the
+// early rule has its own line and cut but only applies in the first `years`
+// years.  When both apply, the larger cut is used.
+function cutFor(flex, ratio, k) {
+  let c = 0;
+  if (!flex) return 0;
+  if (flex.below !== null && ratio < flex.below) c = flex.cut;
+  if (flex.early && k < flex.early.years && ratio < flex.early.below) c = Math.max(c, flex.early.cut);
+  return c;
+}
+function runWindow(i0, years, alloc, rate, real, timing, feeMult, flex) {
+  let bal = 1, w = rate, cum = 1;
   // Check the whole window for gaps first: a window is scored or skipped
   // regardless of when it would have run out of money.
   for (let i = i0; i < i0 + years; i++)
     if ((alloc > 0 && STOCK[i] === null) || (alloc < 1 && BOND[i] === null) || (real && CPI[i] === null)) return null;
+  const draw = k => { bal -= w * (1 - cutFor(flex, bal / cum, k)); };
   for (let k = 0; k < years; k++) {
     const i = i0 + k;
-    if (timing === 'start') { bal -= w; if (bal <= 0) return 0; }
+    if (timing === 'start') { draw(k); if (bal <= 0) return 0; }
     bal *= (1 + alloc * (STOCK[i] || 0) + (1 - alloc) * (BOND[i] || 0)) * feeMult;
-    if (timing === 'end')   { bal -= w; if (bal <= 0) return 0; }
-    if (real) w *= 1 + CPI[i];
+    if (real) { w *= 1 + CPI[i]; cum *= 1 + CPI[i]; }
+    if (timing === 'end')   { draw(k); if (bal <= 0) return 0; }
   }
   return bal;
 }
@@ -349,7 +400,7 @@ function successRate(p, alloc, rate, cfg) {
   const terminals = [];
   let skipped = 0;
   for (const y of starts) {
-    const t = runWindow(IDX[y], p, alloc, rate, cfg.real, cfg.timing, cfg.feeMult);
+    const t = runWindow(IDX[y], p, alloc, rate, cfg.real, cfg.timing, cfg.feeMult, cfg.flex);
     if (t === null) { skipped++; continue; }
     terminals.push(t);
     if (t <= 0) fails.push(y);
@@ -391,8 +442,27 @@ function getCfg() {
     real: document.getElementById('model').value === 'real',
     timing: document.getElementById('timing').value,
     feeMult: 1 - feesPct / 100,
-    threshold: parseFloat(document.getElementById('threshold').value) || 95
+    threshold: parseFloat(document.getElementById('threshold').value) || 95,
+    flex: readFlex()
   };
+}
+function readFlex() {
+  const num = id => parseFloat(document.getElementById(id).value) || 0;
+  const main = document.getElementById('flex').checked;
+  const early = document.getElementById('flex_early').checked;
+  if (!main && !early) return null;
+  return {
+    cut: main ? num('cut_pct') / 100 : 0,
+    below: main ? num('cut_below') / 100 : null,
+    early: early ? { cut: num('early_cut_pct') / 100, below: num('early_cut_below') / 100, years: Math.max(1, Math.round(num('early_years'))) } : null
+  };
+}
+function flexLabel(flex) {
+  if (!flex) return '';
+  const parts = [];
+  if (flex.below !== null) parts.push(`cut ${Math.round(flex.cut * 100)}% below ${Math.round(flex.below * 100)}%`);
+  if (flex.early) parts.push(`cut ${Math.round(flex.early.cut * 100)}% below ${Math.round(flex.early.below * 100)}% in first ${flex.early.years} yrs`);
+  return ' · spending ' + parts.join(', ');
 }
 function cellClass(pct, threshold) {
   if (pct >= threshold) return 'ok';
@@ -464,7 +534,7 @@ function render() {
   const byRate = {};   // rate -> alloc -> [pct per period]
   for (const a of cfg.allocs) {
     t += `<div class="section"><h3>${a}% stocks / ${100 - a}% bonds</h3>`;
-    t += `<div class="meta">${modelLabel} withdrawals · sample ${cfg.start}–${cfg.end} · withdrawals at ${cfg.timing} of year</div>`;
+    t += `<div class="meta">${modelLabel} withdrawals · sample ${cfg.start}–${cfg.end} · withdrawals at ${cfg.timing} of year${flexLabel(cfg.flex)}</div>`;
     t += '<table class="tri"><tr><th>Payout period</th>';
     for (const r of cfg.rates) t += `<th>${r}%</th>`;
     t += '</tr>';
@@ -556,11 +626,13 @@ function preset(name) {
 function downloadCSV() {
   if (!lastRows.length) return;
   const cfg = getCfg();
-  const rows = [['market','sample_start','sample_end','model','timing','fees_pct','period','stock_pct','rate_pct',
+  const f = cfg.flex, e = f && f.early;
+  const rows = [['market','sample_start','sample_end','model','timing','fees_pct','cut_pct','cut_below_pct','early_cut_pct','early_cut_below_pct','early_years','period','stock_pct','rate_pct',
                  'n_windows','n_failed','success_pct','median_terminal_per_1000','failed_starts'].join(',')];
   for (const r of lastRows) {
     rows.push([cfg.market, cfg.start, cfg.end, cfg.real ? 'inflation_adjusted' : 'nominal', cfg.timing,
-               ((1 - cfg.feeMult) * 100).toFixed(2), r.period, r.alloc, r.rate, r.n, r.fails,
+               ((1 - cfg.feeMult) * 100).toFixed(2), f && f.below !== null ? (f.cut * 100).toFixed(0) : '', f && f.below !== null ? (f.below * 100).toFixed(0) : '',
+               e ? (e.cut * 100).toFixed(0) : '', e ? (e.below * 100).toFixed(0) : '', e ? e.years : '', r.period, r.alloc, r.rate, r.n, r.fails,
                r.pct.toFixed(1), (r.median * 1000).toFixed(0), '"' + r.failed + '"'].join(','));
   }
   const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
@@ -572,8 +644,10 @@ function downloadCSV() {
 
 function copyURL() {
   const qs = new URLSearchParams();
-  for (const id of ['market','start','end','periods','rates','allocs','model','timing','fees','threshold'])
+  for (const id of ['market','start','end','periods','rates','allocs','model','timing','fees','threshold','cut_pct','cut_below','early_cut_pct','early_cut_below','early_years'])
     qs.set(id, document.getElementById(id).value);
+  qs.set('flex', document.getElementById('flex').checked);
+  qs.set('flex_early', document.getElementById('flex_early').checked);
   const url = location.origin + location.pathname + '?' + qs.toString();
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(url).then(() => alert('URL copied to clipboard.'), () => prompt('Copy this URL:', url));
@@ -582,7 +656,10 @@ function copyURL() {
 
 function loadFromURL() {
   const qs = new URLSearchParams(location.search);
-  for (const [k, v] of qs) { const el = document.getElementById(k); if (el) el.value = v; }
+  for (const [k, v] of qs) {
+    const el = document.getElementById(k); if (!el) continue;
+    if (el.type === 'checkbox') el.checked = (v === 'true'); else el.value = v;
+  }
 }
 
 function loadPlotly(urls, onReady, onFail) {

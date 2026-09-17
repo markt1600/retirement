@@ -33,6 +33,23 @@ withdrawals either fixed in nominal terms or growing with CPI, no fees (a fee in
 page), success = positive balance at the end. Bonds are 10-year Treasuries / long government
 bonds, not the long-term corporates Trinity used, which makes bond-heavy rows slightly worse.
 
+**Optional spending flexibility** (both pages and the CLI; off by default, not part of the original
+study). Two rules, each with its own switch:
+
+- *Base rule:* in any year the portfolio is below X% of its starting value (real terms under the
+  inflation-adjusted rule, nominal under the fixed rule), cut that year's withdrawal by Y%.
+  Spending returns to the full amount as soon as the portfolio is back above the line.
+- *Early-years rule* (sequence-of-returns risk): a second, usually higher line and its own cut that
+  apply only during the first N years.
+
+When both trigger in the same year the larger cut is used, not both. The safe rate reported is the
+full, uncut starting rate. For the US with a 75/25 mix, a 20% cut below 80% lifts the 4% rule from
+93% to 100% of 40-year windows and from 88% to 99% of 60-year windows
+([`results/trinity_us_1871-2025_cut20below80.md`](results/trinity_us_1871-2025_cut20below80.md));
+adding a 10% cut below 90% in the first 10 years changes little on top of that
+([`results/trinity_us_1871-2025_cut20below80_early10below90for10.md`](results/trinity_us_1871-2025_cut20below80_early10below90for10.md)).
+CLI: `--cut-pct 20 --cut-below 80 --early-cut-pct 10 --early-cut-below 90 --early-years 10`.
+
 ### Headline results (inflation-adjusted withdrawals, full history of each market)
 
 Success rate at a 4% initial withdrawal, 75% stocks / 25% bonds. Window counts in brackets.

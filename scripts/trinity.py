@@ -28,6 +28,13 @@ Mechanics (all configurable from the CLI):
   * windows that need a series in a year where it is missing (Japan
     equities 1946-47, German bonds 1944-48) are skipped, not failed
   * no fees or taxes
+  * optional spending flexibility (--cut-pct / --cut-below): in any year the
+    portfolio is below --cut-below % of its starting value (real terms under
+    the inflation-adjusted rule, nominal otherwise) the withdrawal is reduced
+    by --cut-pct %.  A second early-years rule (--early-cut-pct /
+    --early-cut-below / --early-years) applies its own line and cut only in
+    the first Y years; when both trigger the larger cut is used.  Neither is
+    part of the original study.
 
 Usage examples:
   python3 scripts/trinity.py                              # full default run
@@ -79,35 +86,47 @@ def market_meta(market):
         return {}
 
 
-def run_window(stock, bond, cpi, i0, years, alloc, rate, inflation_adjusted, timing):
+def run_window(stock, bond, cpi, i0, years, alloc, rate, inflation_adjusted, timing, flex=None):
     """Simulate one payout period starting at index i0.  Returns terminal
     balance per 1.0 initial (nominal); <= 0 means failure; None means the
     window needs a series that has a gap, so it cannot be scored."""
     bal = 1.0
     w = rate
     a = alloc
+    cum = 1.0
+    cut, below = (flex["cut"], flex["below"]) if flex else (0.0, None)
+    early = flex["early"] if flex else None
     # Check the whole window for gaps first, so that a window is either
     # scored or skipped regardless of when it would have run out of money.
     for i in range(i0, i0 + years):
         if (a > 0 and stock[i] is None) or (a < 1 and bond[i] is None) or (inflation_adjusted and cpi[i] is None):
             return None
+
+    def draw(bal, k):
+        ratio = bal / cum
+        c = cut if (below is not None and ratio < below) else 0.0
+        if early and k < early["years"] and ratio < early["below"]:
+            c = max(c, early["cut"])
+        return bal - w * (1 - c)
+
     for k in range(years):
         i = i0 + k
         if timing == "start":
-            bal -= w
+            bal = draw(bal, k)
             if bal <= 0:
                 return 0.0
         bal *= 1 + a * (stock[i] or 0) + (1 - a) * (bond[i] or 0)
-        if timing == "end":
-            bal -= w
-            if bal <= 0:
-                return 0.0
         if inflation_adjusted:
             w *= 1 + cpi[i]
+            cum *= 1 + cpi[i]
+        if timing == "end":
+            bal = draw(bal, k)
+            if bal <= 0:
+                return 0.0
     return bal
 
 
-def success_table(series, start, end, periods, rates, allocs, inflation_adjusted, timing, market="us"):
+def success_table(series, start, end, periods, rates, allocs, inflation_adjusted, timing, market="us", flex=None):
     """Return list of result dicts, one per (period, alloc, rate)."""
     years, stock, bond, cpi = series
     idx = {y: i for i, y in enumerate(years)}
@@ -121,7 +140,7 @@ def success_table(series, start, end, periods, rates, allocs, inflation_adjusted
             for r in rates:
                 fails, terminals, skipped = [], [], 0
                 for y in starts:
-                    t = run_window(stock, bond, cpi, idx[y], p, a, r / 100, inflation_adjusted, timing)
+                    t = run_window(stock, bond, cpi, idx[y], p, a, r / 100, inflation_adjusted, timing, flex)
                     if t is None:
                         skipped += 1
                         continue
@@ -134,7 +153,13 @@ def success_table(series, start, end, periods, rates, allocs, inflation_adjusted
                 out.append(OrderedDict(
                     market=market, sample_start=start, sample_end=end,
                     model="inflation_adjusted" if inflation_adjusted else "nominal",
-                    timing=timing, period=p, stock_pct=alloc, rate_pct=r,
+                    timing=timing,
+                    cut_pct=flex["cut"] * 100 if flex and flex["below"] is not None else "",
+                    cut_below_pct=flex["below"] * 100 if flex and flex["below"] is not None else "",
+                    early_cut_pct=flex["early"]["cut"] * 100 if flex and flex["early"] else "",
+                    early_cut_below_pct=flex["early"]["below"] * 100 if flex and flex["early"] else "",
+                    early_years=flex["early"]["years"] if flex and flex["early"] else "",
+                    period=p, stock_pct=alloc, rate_pct=r,
                     n_windows=n, n_skipped=skipped, n_success=n - len(fails),
                     success_pct=round(100 * (n - len(fails)) / n, 1),
                     median_terminal_per_1000=round(1000 * statistics.median(terminals), 0),
@@ -144,11 +169,11 @@ def success_table(series, start, end, periods, rates, allocs, inflation_adjusted
     return out
 
 
-def max_safe_rates(series, start, end, period, alloc, inflation_adjusted, timing, thresholds):
+def max_safe_rates(series, start, end, period, alloc, inflation_adjusted, timing, thresholds, flex=None):
     """For each success threshold (percent), the highest rate on SWR_GRID whose
     success rate is >= threshold, scanning the grid once.  Because success is
     monotone in the rate, take the last grid point that still clears it."""
-    rows = success_table(series, start, end, [period], SWR_GRID, [alloc], inflation_adjusted, timing)
+    rows = success_table(series, start, end, [period], SWR_GRID, [alloc], inflation_adjusted, timing, flex=flex)
     out = {}
     for t in thresholds:
         best = None
@@ -182,13 +207,13 @@ def md_grid(rows, periods, rates, alloc):
     return "\n".join(lines)
 
 
-def md_swr(series, start, end, periods, allocs, inflation_adjusted, timing):
+def md_swr(series, start, end, periods, allocs, inflation_adjusted, timing, flex=None):
     lines = ["| Payout period | " + " | ".join(f"{a}/{100-a}" for a in allocs) + " |",
              "|---|" + "|".join("---:" for _ in allocs) + "|"]
     for p in periods:
         cells = []
         for a in allocs:
-            m = max_safe_rates(series, start, end, p, a, inflation_adjusted, timing, (100, 95))
+            m = max_safe_rates(series, start, end, p, a, inflation_adjusted, timing, (100, 95), flex)
             f = lambda v: "-" if v is None else f"{v:.2f}%"
             cells.append(f"{f(m[100])} / {f(m[95])}")
         if any(c != "- / -" for c in cells):
@@ -209,6 +234,11 @@ def main():
     ap.add_argument("--rates", default=",".join(map(str, DEFAULT_RATES)))
     ap.add_argument("--allocs", default=",".join(map(str, DEFAULT_ALLOCS)), help="stock %% of each mix")
     ap.add_argument("--timing", choices=["start", "end"], default="start", help="withdrawal timing within the year")
+    ap.add_argument("--cut-pct", type=float, default=None, help="spending flexibility: cut withdrawals by this %% in bad years")
+    ap.add_argument("--cut-below", type=float, default=None, help="... when the portfolio is below this %% of its start (real)")
+    ap.add_argument("--early-cut-pct", type=float, default=None, help="early-years rule: cut withdrawals by this %%")
+    ap.add_argument("--early-cut-below", type=float, default=None, help="... when the portfolio is below this %% of its start")
+    ap.add_argument("--early-years", type=int, default=None, help="... during the first N years only")
     ap.add_argument("--label", default=None, help="basename for output files (default from sample years)")
     ap.add_argument("--out", default=RESULTS)
     ap.add_argument("--data", default=DATA)
@@ -222,7 +252,25 @@ def main():
     periods = parse_list(args.periods, int)
     rates = [r if r != int(r) else int(r) for r in parse_list(args.rates)]
     allocs = parse_list(args.allocs, int)
-    label = args.label or f"{args.market}_{start}-{end}"
+    flex = None
+    if (args.cut_pct is None) != (args.cut_below is None):
+        ap.error("--cut-pct and --cut-below must be given together")
+    early_args = (args.early_cut_pct, args.early_cut_below, args.early_years)
+    if any(v is not None for v in early_args) and not all(v is not None for v in early_args):
+        ap.error("--early-cut-pct, --early-cut-below and --early-years must be given together")
+    if args.cut_pct is not None or args.early_cut_pct is not None:
+        flex = {
+            "cut": args.cut_pct / 100 if args.cut_pct is not None else 0.0,
+            "below": args.cut_below / 100 if args.cut_below is not None else None,
+            "early": ({"cut": args.early_cut_pct / 100, "below": args.early_cut_below / 100, "years": args.early_years}
+                      if args.early_cut_pct is not None else None),
+        }
+    suffix = ""
+    if args.cut_pct is not None:
+        suffix += f"_cut{args.cut_pct:g}below{args.cut_below:g}"
+    if args.early_cut_pct is not None:
+        suffix += f"_early{args.early_cut_pct:g}below{args.early_cut_below:g}for{args.early_years}"
+    label = args.label or f"{args.market}_{start}-{end}{suffix}"
     os.makedirs(args.out, exist_ok=True)
 
     all_rows = []
@@ -233,10 +281,20 @@ def main():
           f"Cells are % of overlapping historical start years whose portfolio ended the "
           f"payout period with a positive balance; the window count in each row excludes "
           f"windows that cross a gap in the data.", ""]
+    if flex:
+        parts = []
+        if flex["below"] is not None:
+            parts.append(f"withdrawals cut by {args.cut_pct:g}% in any year the portfolio is below "
+                         f"{args.cut_below:g}% of its starting value")
+        if flex["early"]:
+            parts.append(f"cut by {args.early_cut_pct:g}% when below {args.early_cut_below:g}% during the first "
+                         f"{args.early_years} years")
+        md += ["Spending flexibility: " + "; ".join(parts) +
+               " (real terms under the inflation-adjusted rule; larger cut wins when both apply).", ""]
     if meta.get("notes"):
         md += [f"_{meta['notes']}_", ""]
     for infl in (True, False):
-        rows = success_table(series, start, end, periods, rates, allocs, infl, args.timing, args.market)
+        rows = success_table(series, start, end, periods, rates, allocs, infl, args.timing, args.market, flex)
         all_rows += rows
         title = "Inflation-adjusted withdrawals" if infl else "Fixed nominal withdrawals"
         md += [f"## {title}", ""]
@@ -244,7 +302,7 @@ def main():
             md += [f"### {a}% stocks / {100 - a}% bonds", "", md_grid(rows, periods, rates, a), ""]
         md += [f"### Highest withdrawal rate with 100% / 95% success ({title.lower()})", "",
                "Rate grid is 0.25% steps; '-' means even 1% failed the threshold.", "",
-               md_swr(series, start, end, periods, allocs, infl, args.timing), ""]
+               md_swr(series, start, end, periods, allocs, infl, args.timing, flex), ""]
 
     csv_path = os.path.join(args.out, f"success_rates_{label}.csv")
     with open(csv_path, "w", newline="") as f:
